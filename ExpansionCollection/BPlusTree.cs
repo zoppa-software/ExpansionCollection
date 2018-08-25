@@ -17,80 +17,13 @@ namespace ExpansionCollection
 
         #endregion
 
-        #region "interface"
-
-        /// <summary>木要素インターフェース。</summary>
-        private interface BParts
-        {
-            /// <summary>検索キーとなる要素を取得する。</summary>
-            T HeaderItem { get; }
-
-            /// <summary>データを格納している葉情報の参照を記憶する。</summary>
-            BLeaf TraverseLeaf { get; }
-
-            /// <summary>項目数を取得する。</summary>
-            int Count { get; }
-
-            /// <summary>木要素に要素を追加する。</summary>
-            /// <param name="item">追加する項目。</param>
-            /// <param name="parent">B+木コレクション。</param>
-            /// <returns>追加したら真。</returns>
-            bool Add(T item, BPlusTree<T> parent, ref ManageResult manage);
-
-            /// <summary>指定要素を取得する。</summary>
-            /// <param name="item">削除する要素。</param>
-            /// <param name="parent">木構造。</param>
-            /// <param name="remove">削除状態。</param>
-            /// <returns>バランス調整が必要ならば真。</returns>
-            bool Remove(T item, BPlusTree<T> parent, ref RemoveResult remove);
-
-            /// <summary>指定位置の要素を取得する。</summary>
-            /// <param name="index">削除するインデックス。</param>
-            /// <param name="parent">木構造。</param>
-            /// <param name="remove">削除状態。</param>
-            /// <returns>バランス調整が必要ならば真。</returns>
-            bool RemoveAt(int index, BPlusTree<T> parent, ref RemoveResult remove);
-
-            /// <summary>同階層の要素内の項目数のバランスを取る。</summary>
-            /// <param name="other">同階層の要素。</param>
-            void BalanceParts(BParts other);
-
-            /// <summary>指定要素の項目を取り込む。</summary>
-            /// <param name="other">取り込む要素。</param>
-            void MargeParts(BParts other);
-
-            /// <summary>リストに指定項目が登録されているか検索し、あれば取得する。</summary>
-            /// <param name="item">検索項目。</param>
-            /// <param name="resultvalue">取得結果。</param>
-            /// <param name="parent">B+木コレクション。</param>
-            /// <returns>存在すれば真。</returns>
-            bool TryGetValue(T item, out T resultvalue, BPlusTree<T> parent);
-
-            /// <summary>指定した項目が最初に見つかったインデックスを取得する。</summary>
-            /// <param name="item">検索する要素。</param>
-            /// <returns>要素のインデックス。見つからなかったら -1。</returns>
-            int IndexOf(T item, BPlusTree<T> parent);
-
-            /// <summary>指定した項目が最後に見つかったインデックスを取得する。</summary>
-            /// <param name="item">検索する要素。</param>
-            /// <returns>要素のインデックス。見つからなかったら -1。</returns>
-            int LastIndexOf(T item, BPlusTree<T> parent);
-
-            /// <summary>文字列表現（木形式）を取得する。</summary>
-            /// <param name="builder">文字列バッファ。</param>
-            /// <param name="nest">ネスト文字列。</param>
-            void ConvertTxetTree(StringBuilder builder, string nest);
-        }
-
-        #endregion
-
         #region "struct"
 
         /// <summary>処理状態結果。</summary>
         private struct ManageResult
         {
             /// <summary>交換するデータ。</summary>
-            public BParts newParts;
+            public IBParts newParts;
 
             /// <summary>葉情報が変更されていたら真。</summary>
             public bool changed;
@@ -122,126 +55,6 @@ namespace ExpansionCollection
             {
                 this.leaf = leaf;
                 this.index = idx;
-            }
-        }
-
-        #endregion
-
-        #region "inner class"
-
-        //--------------------------------------------------------------------
-        // 列挙の実装
-        //--------------------------------------------------------------------
-        /// <summary>項目参照用、列挙子。</summary>
-        private sealed class BPlusEnumerator
-            : IBPlusTreeIterator<T>
-        {
-            /// <summary>参照対象のコレクション。</summary>
-            private BPlusTree<T> parent;
-
-            /// <summary>現在位置（葉要素）</summary>
-            private BLeaf curleaf;
-
-            /// <summary>現在位置（葉要素内のインデックス）</summary>
-            private int ptridx;
-
-            /// <summary>初期位置ならば 0。</summary>
-            private int started;
-
-            /// <summary>列挙子の現在位置にあるコレクション内の要素を取得する。</summary>
-            public T Current
-            {
-                get {
-                    return this.curleaf.GetValue(this.ptridx);
-                }
-            }
-
-            /// <summary>列挙子の現在位置にあるコレクション内の要素を取得する。</summary>
-            object IEnumerator.Current
-            {
-                get {
-                    return this.curleaf.GetValue(this.ptridx);
-                }
-            }
-
-            /// <summary>コンストラクタ。</summary>
-            /// <param name="parent">B+木コレクション。</param>
-            public BPlusEnumerator(BPlusTree<T> parent)
-            {
-                this.parent = parent;
-                this.curleaf = parent.start;
-                this.ptridx = -1;
-                this.started = 0;
-            }
-
-            /// <summary>コンストラクタ（列挙を特定の位置より始める場合）</summary>
-            /// <param name="parent">B+木コレクション。</param>
-            /// <param name="leaf">葉要素。</param>
-            /// <param name="index">開始位置。</param>
-            public BPlusEnumerator(BPlusTree<T> parent, BLeaf leaf, int index)
-            {
-                this.parent = parent;
-                this.curleaf = leaf;
-                this.ptridx = -1;
-                this.started = index;
-            }
-
-            /// <summary>列挙子を次の要素へ進める。</summary>
-            /// <returns>進める要素があれば真。</returns>
-            public bool MoveNext()
-            {
-                if (this.ptridx < 0) {
-                    this.ptridx = this.started;
-                    return (this.ptridx >= 0 && this.ptridx < this.curleaf.Count);
-                }
-                else if (this.ptridx < this.curleaf.Count - 1) {
-                    this.ptridx++;
-                    return true;
-                }
-                else if (this.curleaf.NextLeaf != null) {
-                    this.curleaf = this.curleaf.NextLeaf;
-                    this.ptridx = 0;
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            }
-
-            /// <summary>列挙子を前の要素へ進める。</summary>
-            /// <returns>進める要素があれば真。</returns>
-            public bool MovePreviw()
-            {
-                if (this.ptridx < 0) {
-                    this.ptridx = this.started;
-                    return (this.ptridx >= 0 && this.ptridx < this.curleaf.Count);
-                }
-                else if (this.ptridx > 0) {
-                    this.ptridx--;
-                    return true;
-                }
-                else if (this.curleaf.PreviewLeaf != null) {
-                    this.curleaf = this.curleaf.PreviewLeaf;
-                    this.ptridx = this.curleaf.Count - 1;
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            }
-
-            /// <summary>列挙子をコレクションの最初の要素の前に設定する。</summary>
-            public void Reset()
-            {
-                this.curleaf = this.parent.start;
-                this.ptridx = -1;
-                this.started = 0;
-            }
-
-            /// <summary>リソースの解放を行う。</summary>
-            public void Dispose()
-            {
-                // ※ 解放する要素なし
             }
         }
 
@@ -450,18 +263,6 @@ namespace ExpansionCollection
             return res;
         }
 
-        /// <summary>コレクションの各要素に指定された式を適用する。</summary>
-        /// <param name="action">実行する式。</param>
-        public void ForEach(Action<T> action)
-        {
-            var ptr = this.start;
-            while (ptr != null) {
-                for (int i = 0; i < ptr.Count; ++i) {
-                    action(ptr.GetValue(i));
-                }
-            }
-        }
-
         //---------------------------------------------------------------------
         // 追加
         //---------------------------------------------------------------------
@@ -509,7 +310,7 @@ namespace ExpansionCollection
         }
 
         //--------------------------------------------------------------------
-        // 列挙機能実装
+        // 削除
         //--------------------------------------------------------------------
         /// <summary>指定要素を削除する。</summary>
         /// <param name="item">削除する要素。</param>
@@ -595,32 +396,6 @@ namespace ExpansionCollection
             return new SearchResult(cur, idx);
         }
 
-        //--------------------------------------------------------------------
-        // 値取得、存在確認
-        //--------------------------------------------------------------------
-        /// <summary>リストに指定項目が登録されているか検索し、あれば取得する。</summary>
-        /// <param name="item">検索項目。</param>
-        /// <param name="resultvalue">取得結果。</param>
-        /// <returns>存在すれば真。</returns>
-        public bool TryGetValue(T item, out T resultvalue)
-        {
-            if (this.root == null) {
-                return this.start.TryGetValue(item, out resultvalue, this);
-            }
-            else {
-                return this.root.TryGetValue(item, out resultvalue, this);
-            }
-        }
-
-        /// <summary>要素が存在するか確認する。</summary>
-        /// <param name="item">確認する要素。</param>
-        /// <returns>要素が存在すれば真。</returns>
-        public bool Contains(T item)
-        {
-            T res;
-            return this.TryGetValue(item, out res);
-        }
-
         //---------------------------------------------------------------------
         // コピー機能
         //---------------------------------------------------------------------
@@ -692,6 +467,79 @@ namespace ExpansionCollection
             }
         }
 
+        //--------------------------------------------------------------------
+        // 値取得、存在確認
+        //--------------------------------------------------------------------
+        /// <summary>リストに指定項目が登録されているか検索し、あれば取得する。</summary>
+        /// <param name="item">検索項目。</param>
+        /// <param name="resultvalue">取得結果。</param>
+        /// <returns>存在すれば真。</returns>
+        public bool TryGetValue(T item, out T resultvalue)
+        {
+            if (this.root == null) {
+                return this.start.TryGetValue(item, out resultvalue, this);
+            }
+            else {
+                return this.root.TryGetValue(item, out resultvalue, this);
+            }
+        }
+
+        /// <summary>要素が存在するか確認する。</summary>
+        /// <param name="item">確認する要素。</param>
+        /// <returns>要素が存在すれば真。</returns>
+        public bool Contains(T item)
+        {
+            T res;
+            return this.TryGetValue(item, out res);
+        }
+
+        //---------------------------------------------------------------------
+        // 検索
+        //---------------------------------------------------------------------
+        /// <summary>指定値以上の項目が存在するポイントを取得する</summary>
+        /// <param name="item">検索項目。</param>
+        /// <returns>結果ポインタ。</returns>
+        public IBPlusTreeIterator<T> SearchOfGreterEqual(T item)
+        {
+            SearchResult search = (this.root == null ?
+                                   this.start.SearchOfGe(item, this) :
+                                   this.root.SearchOfGe(item, this));
+            return new BPlusEnumerator(this, search.leaf, search.index);
+        }
+
+        /// <summary>指定値以下の項目が存在するポイントを取得する</summary>
+        /// <param name="item">検索項目。</param>
+        /// <returns>結果ポインタ。</returns>
+        public IBPlusTreeIterator<T> SearchOfLessEqual(T item)
+        {
+            SearchResult search = (this.root == null ?
+                                   this.start.SearchOfLe(item, this) :
+                                   this.root.SearchOfLe(item, this));
+            return new BPlusEnumerator(this, search.leaf, search.index);
+        }
+
+        /// <summary>指定値をこえる項目が存在するポイントを取得する</summary>
+        /// <param name="item">検索項目。</param>
+        /// <returns>結果ポインタ。</returns>
+        public IBPlusTreeIterator<T> SearchOfGreter(T item)
+        {
+            SearchResult search = (this.root == null ?
+                                   this.start.SearchOfGt(item, this) :
+                                   this.root.SearchOfGt(item, this));
+            return new BPlusEnumerator(this, search.leaf, search.index);
+        }
+
+        /// <summary>指定値未満の項目が存在するポイントを取得する</summary>
+        /// <param name="item">検索項目。</param>
+        /// <returns>結果ポインタ。</returns>
+        public IBPlusTreeIterator<T> SearchOfLess(T item)
+        {
+            SearchResult search = (this.root == null ?
+                                   this.start.SearchOfLt(item, this) :
+                                   this.root.SearchOfLt(item, this));
+            return new BPlusEnumerator(this, search.leaf, search.index);
+        }
+
         //---------------------------------------------------------------------
         // IndexOf／LastIndexOf
         //---------------------------------------------------------------------
@@ -721,8 +569,24 @@ namespace ExpansionCollection
             }
         }
 
-        #endregion
+        //---------------------------------------------------------------------
+        // 便利機能
+        //---------------------------------------------------------------------
+        /// <summary>コレクションの各要素に指定された式を適用する。</summary>
+        /// <param name="action">実行する式。</param>
+        public void ForEach(Action<T> action)
+        {
+            var ptr = this.start;
+            while (ptr != null) {
+                for (int i = 0; i < ptr.Count; ++i) {
+                    action(ptr.GetValue(i));
+                }
+            }
+        }
 
+        //---------------------------------------------------------------------
+        // その他、実装予定未定
+        //---------------------------------------------------------------------
         //public int RemoveAll(Predicate<T> match);
         //public void RemoveRange(int index, int count);
         //public List<TOutput> ConvertAll<TOutput>(Converter<T, TOutput> converter);
@@ -738,5 +602,6 @@ namespace ExpansionCollection
         //public int FindLastIndex(Predicate<T> match);
         //public bool TrueForAll(Predicate<T> match);
 
+        #endregion
     }
 }

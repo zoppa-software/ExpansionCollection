@@ -5,18 +5,21 @@ namespace ExpansionCollection
 {
     partial class BPlusTree<T>
     {
-        //--------------------------------------------------------------------
-        // 枝クラス実装
-        //--------------------------------------------------------------------
         /// <summary>木要素、枝クラス。</summary>
         private sealed class BBranch
-            : BParts
+            : IBParts
         {
+            #region "fields"
+
             /// <summary>項目リスト。</summary>
-            private BParts[] value;
+            private IBParts[] value;
 
             /// <summary>先頭の葉。</summary>
             private BLeaf headerLeaf;
+
+            #endregion
+
+            #region "properteis"
 
             /// <summary>項目数を取得する。</summary>
             public int Count
@@ -30,16 +33,20 @@ namespace ExpansionCollection
 
             /// <summary>最初の要素を取得する。</summary>
             /// <returns>最初の要素。</returns>
-            public BParts FirstParts => this.value[0];
+            public IBParts FirstParts => this.value[0];
 
             /// <summary>データを格納している葉情報の参照を記憶する。</summary>
             public BLeaf TraverseLeaf => this.value[0].TraverseLeaf;
+
+            #endregion
+
+            #region "constructor"
 
             /// <summary>コンストラクタ。</summary>
             /// <param name="bracket">領域サイズ。</param>
             public BBranch(int bracket)
             {
-                this.value = new BParts[bracket];
+                this.value = new IBParts[bracket];
                 this.Count = 0;
             }
 
@@ -47,15 +54,22 @@ namespace ExpansionCollection
             /// <param name="bracket">領域サイズ。</param>
             /// <param name="leftItem">左辺値。</param>
             /// <param name="rightItem">右辺値。</param>
-            public BBranch(int bracket, BParts leftItem, BParts rightItem)
+            public BBranch(int bracket, IBParts leftItem, IBParts rightItem)
             {
-                this.value = new BParts[bracket];
+                this.value = new IBParts[bracket];
                 this.Count = 2;
                 this.value[0] = leftItem;
                 this.value[1] = rightItem;
                 this.headerLeaf = this.TraverseLeaf;
             }
 
+            #endregion
+
+            #region "methods"
+
+            //---------------------------------------------------------------------
+            // 追加
+            //---------------------------------------------------------------------
             /// <summary>木要素に要素を追加する。</summary>
             /// <param name="item">追加する項目。</param>
             /// <param name="parent">B+木コレクション。</param>
@@ -107,7 +121,7 @@ namespace ExpansionCollection
             /// <param name="idx">追加位置。</param>
             /// <param name="parent">木構造。</param>
             /// <param name="manage">処理結果。</param>
-            private void Split(BParts element, int idx, BPlusTree<T> parent, ref ManageResult manage)
+            private void Split(IBParts element, int idx, BPlusTree<T> parent, ref ManageResult manage)
             {
                 var tmpNext = new BBranch(parent.bracketSize);
 
@@ -150,6 +164,9 @@ namespace ExpansionCollection
                 manage.newParts = tmpNext;
             }
 
+            //---------------------------------------------------------------------
+            // 削除
+            //---------------------------------------------------------------------
             /// <summary>指定要素を取得する。</summary>
             /// <param name="item">削除する要素。</param>
             /// <param name="parent">木構造。</param>
@@ -242,7 +259,7 @@ namespace ExpansionCollection
 
             /// <summary>同階層の要素内の項目数のバランスを取る。</summary>
             /// <param name="other">同階層の要素。</param>
-            public void BalanceParts(BParts other)
+            public void BalanceParts(IBParts other)
             {
                 var branch = (BPlusTree<T>.BBranch)other;
 
@@ -277,135 +294,27 @@ namespace ExpansionCollection
 
             /// <summary>指定要素の項目を取り込む。</summary>
             /// <param name="other">取り込む要素。</param>
-            public void MargeParts(BParts other)
+            public void MargeParts(IBParts other)
             {
                 var branch = (BPlusTree<T>.BBranch)other;
                 Array.Copy(branch.value, 0, this.value, this.Count, branch.Count);
                 this.Count += branch.Count;
             }
 
-
-            //            /// <summary>木要素より項目を削除する。</summary>
-            //            /// <param name="item">削除する項目。</param>
-            //            /// <param name="parent">B+木コレクション。</param>
-            //            /// <returns>項目が残っていれば真。</returns>
-            //            public bool Remove(T item, FZZ01_2000_BPlusTree<T> parent)
-            //            {
-            //                // 削除項目を検索
-            //                int idx = BinarySearchOfBPartsLt(item, this.value, this.branchCount);
-
-            //                // 前のグループから削除を行う
-            //                var balance = this.value[idx].Remove(item, parent);
-            //                if (!parent.changed && idx + 1 < this.branchCount) {
-            //                    idx++;
-            //                    balance = this.value[idx].Remove(item, parent);
-            //                }
-
-            //                // 枝、葉のバランスの調整
-            //                if (balance) {
-            //                    return this.BalanceChangeOfBParts(idx, parent);
-            //                }
-            //                else {
-            //                    return false;
-            //                }
-            //            }
-
-            //            /// <summary>指定要素以上となるインデックスを検索する。</summary>
-            //            /// <param name="item">検索項目。</param>
-            //            /// <param name="parent">B+木コレクション。</param>
-            //            /// <returns>検索結果。</returns>
-            //            public SearchResult SearchOfGe(T item, FZZ01_2000_BPlusTree<T> parent)
-            //            {
-            //                // 項目を検索
-            //                int idx = BinarySearchOfBPartsLt(item, this.value, this.branchCount);
-
-            //                // 前のグループから検索を行う
-            //                var answer = this.value[idx].SearchOfGe(item, parent);
-            //                if (answer.index >= answer.leaf.Count && idx + 1 < this.branchCount) {
-            //                    var nxtans = this.value[idx + 1].SearchOfGe(item, parent);
-            //                    if (nxtans.index < nxtans.leaf.Count) {
-            //                        answer = nxtans;
-            //                    }
-            //                }
-
-            //                return answer;
-            //            }
-
-            //            /// <summary>指定要素以下となるインデックスを検索する。</summary>
-            //            /// <param name="item">検索項目。</param>
-            //            /// <param name="parent">B+木コレクション。</param>
-            //            /// <returns>検索結果。</returns>
-            //            public SearchResult SearchOfLe(T item, FZZ01_2000_BPlusTree<T> parent)
-            //            {
-            //                // 項目を検索
-            //                int idx = BinarySearchOfBPartsGt(item, this.value, this.branchCount);
-
-            //                // 前のグループから検索を行う
-            //                var answer = this.value[idx].SearchOfLe(item, parent);
-            //                if (answer.index < 0 && idx > 0) {
-            //                    var nxtans = this.value[idx - 1].SearchOfLe(item, parent);
-            //                    if (nxtans.index >= 0) {
-            //                        answer = nxtans;
-            //                    }
-            //                }
-
-            //                return answer;
-            //            }
-
-            //            /// <summary>指定要素をこえるインデックスを検索する。</summary>
-            //            /// <param name="item">検索項目。</param>
-            //            /// <param name="parent">B+木コレクション。</param>
-            //            /// <returns>検索結果。</returns>
-            //            public SearchResult SearchOfGt(T item, FZZ01_2000_BPlusTree<T> parent)
-            //            {
-            //                // 項目を検索
-            //                int idx = BinarySearchOfBPartsLe(item, this.value, this.branchCount);
-
-            //                // 前のグループから検索を行う
-            //                var answer = this.value[idx].SearchOfGt(item, parent);
-            //                if (answer.index >= answer.leaf.Count && idx + 1 < this.branchCount) {
-            //                    var nxtans = this.value[idx + 1].SearchOfGt(item, parent);
-            //                    if (nxtans.index < nxtans.leaf.Count) {
-            //                        answer = nxtans;
-            //                    }
-            //                }
-
-            //                return answer;
-            //            }
-
-            //            /// <summary>指定要素未満のインデックスを検索する。</summary>
-            //            /// <param name="item">検索項目。</param>
-            //            /// <param name="parent">B+木コレクション。</param>
-            //            /// <returns>検索結果。</returns>
-            //            public SearchResult SearchOfLt(T item, FZZ01_2000_BPlusTree<T> parent)
-            //            {
-            //                // 項目を検索
-            //                int idx = BinarySearchOfBPartsGe(item, this.value, this.branchCount);
-
-            //                // 前のグループから検索を行う
-            //                var answer = this.value[idx].SearchOfLt(item, parent);
-            //                if (answer.index < 0 && idx > 0) {
-            //                    var nxtans = this.value[idx - 1].SearchOfLt(item, parent);
-            //                    if (nxtans.index >= 0) {
-            //                        answer = nxtans;
-            //                    }
-            //                }
-
-            //                return answer;
-            //            }
-
-            /// <summary>リストに指定項目が登録されているか検索し、あれば取得する。</summary>
+            //---------------------------------------------------------------------
+            // 検索機能
+            //---------------------------------------------------------------------
+            /// <summary>指定要素以上となるインデックスを検索する。</summary>
             /// <param name="item">検索項目。</param>
-            /// <param name="resultvalue">取得結果。</param>
             /// <param name="parent">B+木コレクション。</param>
-            /// <returns>存在すれば真。</returns>
-            public bool TryGetValue(T item, out T resultvalue, BPlusTree<T> parent)
+            /// <returns>検索結果。</returns>
+            public SearchResult SearchOfGe(T item, BPlusTree<T> parent)
             {
                 int lf = 0;
                 int rt = this.Count - 1;
                 int md;
 
-                // 挿入位置の検索
+                // 位置の検索
                 while (lf < rt) {
                     md = lf + (rt - lf) / 2 + 1;
 
@@ -418,9 +327,90 @@ namespace ExpansionCollection
                 }
 
                 // 存在を確認する
-                return this.value[lf].TryGetValue(item, out resultvalue, parent);
+                return this.value[lf].SearchOfGe(item, parent);
             }
 
+            /// <summary>指定要素以下となるインデックスを検索する。</summary>
+            /// <param name="item">検索項目。</param>
+            /// <param name="parent">B+木コレクション。</param>
+            /// <returns>検索結果。</returns>
+            public SearchResult SearchOfLe(T item, BPlusTree<T> parent)
+            {
+                int lf = 0;
+                int rt = this.Count - 1;
+                int md;
+
+                // 位置の検索
+                while (lf < rt) {
+                    md = lf + (rt - lf) / 2 + 1;
+
+                    if (parent.defComp.Compare(this.value[md].HeaderItem, item) > 0) {
+                        rt = md - 1;
+                    }
+                    else {
+                        lf = md;
+                    }
+                }
+
+                // 存在を確認する
+                return this.value[lf].SearchOfLe(item, parent);
+            }
+
+            /// <summary>指定要素をこえるインデックスを検索する。</summary>
+            /// <param name="item">検索項目。</param>
+            /// <param name="parent">B+木コレクション。</param>
+            /// <returns>検索結果。</returns>
+            public SearchResult SearchOfGt(T item, BPlusTree<T> parent)
+            {
+                int lf = 0;
+                int rt = this.Count - 1;
+                int md;
+
+                // 位置の検索
+                while (lf < rt) {
+                    md = lf + (rt - lf) / 2 + 1;
+
+                    if (parent.defComp.Compare(this.value[md].HeaderItem, item) > 0) {
+                        rt = md - 1;
+                    }
+                    else {
+                        lf = md;
+                    }
+                }
+
+                // 存在を確認する
+                return this.value[lf].SearchOfGt(item, parent);
+            }
+
+            /// <summary>指定要素未満のインデックスを検索する。</summary>
+            /// <param name="item">検索項目。</param>
+            /// <param name="parent">B+木コレクション。</param>
+            /// <returns>検索結果。</returns>
+            public SearchResult SearchOfLt(T item, BPlusTree<T> parent)
+            {
+                int lf = 0;
+                int rt = this.Count - 1;
+                int md;
+
+                // 位置の検索
+                while (lf < rt) {
+                    md = lf + (rt - lf) / 2 + 1;
+
+                    if (parent.defComp.Compare(this.value[md].HeaderItem, item) >= 0) {
+                        rt = md - 1;
+                    }
+                    else {
+                        lf = md;
+                    }
+                }
+
+                // 存在を確認する
+                return this.value[lf].SearchOfLt(item, parent);
+            }
+
+            //---------------------------------------------------------------------
+            // IndexOf／LastIndexOf
+            //---------------------------------------------------------------------
             /// <summary>指定した項目が最初に見つかったインデックスを取得する。</summary>
             /// <param name="item">検索する要素。</param>
             /// <returns>要素のインデックス。見つからなかったら -1。</returns>
@@ -471,6 +461,36 @@ namespace ExpansionCollection
                 return this.value[lf].LastIndexOf(item, parent);
             }
 
+            //---------------------------------------------------------------------
+            // その他
+            //---------------------------------------------------------------------
+            /// <summary>リストに指定項目が登録されているか検索し、あれば取得する。</summary>
+            /// <param name="item">検索項目。</param>
+            /// <param name="resultvalue">取得結果。</param>
+            /// <param name="parent">B+木コレクション。</param>
+            /// <returns>存在すれば真。</returns>
+            public bool TryGetValue(T item, out T resultvalue, BPlusTree<T> parent)
+            {
+                int lf = 0;
+                int rt = this.Count - 1;
+                int md;
+
+                // 挿入位置の検索
+                while (lf < rt) {
+                    md = lf + (rt - lf) / 2 + 1;
+
+                    if (parent.defComp.Compare(this.value[md].HeaderItem, item) >= 0) {
+                        rt = md - 1;
+                    }
+                    else {
+                        lf = md;
+                    }
+                }
+
+                // 存在を確認する
+                return this.value[lf].TryGetValue(item, out resultvalue, parent);
+            }
+
             /// <summary>文字列表現（木形式）を取得する。</summary>
             /// <param name="builder">文字列バッファ。</param>
             /// <param name="nest">ネスト文字列。</param>
@@ -483,6 +503,8 @@ namespace ExpansionCollection
                     builder.AppendLine();
                 }
             }
+
+            #endregion
         }
     }
 }
