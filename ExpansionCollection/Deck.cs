@@ -903,6 +903,207 @@ namespace ExpansionCollection
         }
 
         //---------------------------------------------------------------------
+        // 存在確認
+        //---------------------------------------------------------------------
+        /// <summary>指定要素がリスト内に存在するか確認する。</summary>
+        /// <param name="item">確認する要素。</param>
+        /// <returns>要素があると真。</returns>
+
+        public bool Contains(T item)
+        {
+            if ((Object)item == null) {
+                for (int j = 0; j < this.blocks.Count; ++j) {
+                    var bck = this.blocks[j];
+                    for (int i = 0; i < bck.count; ++i) {
+                        if ((Object)bck.items[i] == null) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            else {
+                var equ = EqualityComparer<T>.Default;
+                for (int j = 0; j < this.blocks.Count; ++j) {
+                    var bck = this.blocks[j];
+                    for (int i = 0; i < bck.count; ++i) {
+                        if (equ.Equals(bck.items[i], item)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>指定要素がリスト内に存在するか確認する。</summary>
+        /// <param name="item">確認する要素。</param>
+        /// <returns>要素があると真。</returns>
+        public bool Contains(object value)
+        {
+            if ((value is T) || (value == null && default(T) == null)) {
+                return this.Contains((T)value);
+            }
+            else {
+                return false;
+            }
+        }
+
+        //---------------------------------------------------------------------
+        // バイナリサーチ
+        //---------------------------------------------------------------------
+        /// <summary>バイナリサーチで要素を検索する。</summary>
+        /// <param name="item">検索要素。</param>
+        /// <returns>発見した位置。</returns>
+        public int BinarySearch(T item)
+        {
+            return this.BinarySearch(item, Comparer<T>.Default);
+        }
+
+        /// <summary>バイナリサーチで要素を検索する。</summary>
+        /// <param name="item">検索要素。</param>
+        /// <param name="comparer">比較メソッド。</param>
+        /// <returns>発見した位置。</returns>
+        public int BinarySearch(T item, IComparer<T> comparer)
+        {
+            int lf = 0;
+            int rt = this.blocks.Count - 1;
+            int md;
+
+            // 検索ブロックを決定
+            while (lf < rt) {
+                md = lf + (rt - lf) / 2 + 1;
+
+                if (comparer.Compare(this.blocks[md].items[0], item) >= 0) {
+                    rt = md - 1;
+                }
+                else {
+                    lf = md;
+                }
+            }
+
+            // ブロック内を検索
+            return this.InnerBinarySearch(item, lf, comparer);
+        }
+
+        /// <summary>バイナリサーチで要素を検索する（ブロック単位）</summary>
+        /// <param name="item">検索する要素。</param>
+        /// <param name="blkIndex">ブロックインデックス。</param>
+        /// <param name="comparer">比較メソッド。</param>
+        /// <returns>発見した位置。</returns>
+        private int InnerBinarySearch(T item, int blkIndex, IComparer<T> comparer)
+        {
+            var block = this.blocks[blkIndex];
+            int lf = 0;
+            int rt = block.count;
+            int md;
+
+            // 位置の検索
+            while (lf < rt) {
+                md = lf + (rt - lf) / 2;
+
+                if (comparer.Compare(block.items[md], item) < 0) {
+                    lf = md + 1;
+                }
+                else {
+                    rt = md;
+                }
+            }
+
+            if (lf < block.count &&
+                comparer.Compare(block.items[lf], item) == 0) {
+                // 要素が見つかった
+                return block.Index + lf;
+            }
+            else if (blkIndex < this.blocks.Count - 1 &&
+                     comparer.Compare(this.blocks[blkIndex + 1].items[0], item) == 0) {
+                // 自ブロックの先頭で一致した
+                return block.Index + block.count;
+            }
+            else {
+                // 要素が見つからない
+                return ~(block.Index + lf);
+            }
+        }
+
+        //---------------------------------------------------------------------
+        // IndexOf／LastIndexOf
+        //---------------------------------------------------------------------
+        /// <summary>指定した要素がリストで最初に表示した位置を取得する。</summary>
+        /// <param name="item">検索する要素。</param>
+        /// <returns>発見した位置。</returns>
+        public int IndexOf(T item)
+        {
+            if ((Object)item == null) {
+                // null比較
+                for (int j = 0; j < this.blocks.Count; ++j) {
+                    var bck = this.blocks[j];
+                    for (int i = 0; i < bck.count; ++i) {
+                        if ((Object)bck.items[i] == null) {
+                            return bck.Index + i;
+                        }
+                    }
+                }
+            }
+            else {
+                // 値比較
+                var equ = EqualityComparer<T>.Default;
+                for (int j = 0; j < this.blocks.Count; ++j) {
+                    var bck = this.blocks[j];
+                    for (int i = 0; i < bck.count; ++i) {
+                        if (equ.Equals(bck.items[i], item)) {
+                            return bck.Index + i;
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>指定した要素がリストで最初に表示した位置を取得する。</summary>
+        /// <param name="value">検索する要素。</param>
+        /// <returns>発見した位置。</returns>
+        public int IndexOf(object value)
+        {
+            if ((value is T) || (value == null && default(T) == null)) {
+                return this.IndexOf((T)value);
+            }
+            else {
+                return -1;
+            }
+        }
+
+        /// <summary>指定した要素がリストで最後に表示した位置を取得する。</summary>
+        /// <param name="item">検索する要素。</param>
+        /// <returns>発見した位置。</returns>
+        public int LastIndexOf(T item)
+        {
+            if ((Object)item == null) {
+                // null比較
+                for (int j = this.blocks.Count - 1; j >= 0; --j) {
+                    var bck = this.blocks[j];
+                    for (int i = bck.count - 1; i >= 0; --i) {
+                        if ((Object)bck.items[i] == null) {
+                            return bck.Index + i;
+                        }
+                    }
+                }
+            }
+            else {
+                // 値比較
+                var equ = EqualityComparer<T>.Default;
+                for (int j = this.blocks.Count - 1; j >= 0; --j) {
+                    var bck = this.blocks[j];
+                    for (int i = bck.count - 1; i >= 0; --i) {
+                        if (equ.Equals(bck.items[i], item)) {
+                            return bck.Index + i;
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        //---------------------------------------------------------------------
         // 便利機能
         //---------------------------------------------------------------------
         /// <summary>コレクション内の全ての要素が式で定義される条件に一致するか調べる。</summary>
@@ -934,35 +1135,8 @@ namespace ExpansionCollection
         }
 
         //---------------------------------------------------------------------
-        // 追加
+        // その他、実装予定未定
         //---------------------------------------------------------------------
-
-        public bool Contains(T item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int IndexOf(T item)
-        {
-
-
-            throw new NotImplementedException();
-        }
-
-        public bool Contains(object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int IndexOf(object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        //        int BinarySearch(int index, int count, T item, IComparer<T> comparer)
-        //        int BinarySearch(T item);
-        //        int BinarySearch(T item, IComparer<T> comparer);
-        //        bool Contains(T item);
         //        List<TOutput> ConvertAll<TOutput>(Converter<T, TOutput> converter);
         //        bool Exists(Predicate<T> match);
         //        T Find(Predicate<T> match);
@@ -974,13 +1148,6 @@ namespace ExpansionCollection
         //        int FindLastIndex(Predicate<T> match);
         //        int FindLastIndex(int startIndex, Predicate<T> match);
         //        int FindLastIndex(int startIndex, int count, Predicate<T> match);
-        //        int IndexOf(T item, int index, int count);
-        //        int IndexOf(T item, int index);
-        //        int IndexOf(T item);
-        //        int LastIndexOf(T item);
-        //        int LastIndexOf(T item, int index);
-        //        int LastIndexOf(T item, int index, int count);
-        //        void TrimExcess();
 
         #endregion
     }

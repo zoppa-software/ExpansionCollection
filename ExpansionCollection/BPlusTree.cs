@@ -543,6 +543,7 @@ namespace ExpansionCollection
             }
         }
 
+        /// <summary>ルート要素の再設定。</summary>
         private void RelinkRoot()
         {
             if (this.root.Count <= 1) {

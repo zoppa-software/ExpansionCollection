@@ -182,7 +182,7 @@ namespace ExpansionCollectionTest
         [TestMethod]
         public void AddSortTest()
         {
-            var rnd = new Random(1);
+            var rnd = new Random(0);
             var vals = new List<int>();
             for (int i = 0; i < 100; ++i) {
                 vals.Add(i);
@@ -201,6 +201,57 @@ namespace ExpansionCollectionTest
 
             for (int i = 0; i < deck.Count; ++i) {
                 Assert.AreEqual(deck[i], i);
+            }
+        }
+
+        [TestMethod]
+        public void ContainsTest()
+        {
+            var rnd = new Random();
+
+            var vals = new List<int>();
+            for (int i = 0; i < 50; ++i) {
+                vals.Add(i);
+            }
+            var deck = new Deck<int>(vals, 5);
+
+
+            for (int i = 0; i < 100; ++i) {
+                var v = rnd.Next(vals.Count);
+                Assert.AreEqual(deck.Contains(v), vals.Contains(v));
+            }
+        }
+
+        [TestMethod]
+        public void BinarySearchTest()
+        {
+            var vals = new List<int>();
+            for (int i = 0; i < 50; ++i) {
+                vals.Add(i);
+            }
+            var deck = new Deck<int>(vals, 5);
+
+            for (int i = -1; i < 50; ++i) {
+                Assert.AreEqual(deck.BinarySearch(i), vals.BinarySearch(i));
+            }
+        }
+
+        [TestMethod]
+        public void IndexOfTest()
+        {
+            var vals = new List<int>();
+            for (int i = 0; i < 50; ++i) {
+                vals.Add(i);
+                vals.Add(i);
+            }
+            var deck = new Deck<int>(vals, 5);
+
+            for (int i = -1; i < 50; ++i) {
+                Assert.AreEqual(deck.IndexOf(i), vals.IndexOf(i));
+            }
+
+            for (int i = -1; i < 50; ++i) {
+                Assert.AreEqual(deck.LastIndexOf(i), vals.LastIndexOf(i));
             }
         }
     }
